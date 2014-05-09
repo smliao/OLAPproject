@@ -110,7 +110,16 @@
 					</select>
 				</td>
 				</tr>
+
+				<tr>
+					<td> <input type="text" name="time_dice"> </td>
+					<td> <input type="text" name="promotion_dice"> </td>
+					<td> <input type="text" name="product_dice"> </td>
+					<td> <input type="text" name="store_dice"> </td>
+					<td></td>
+				</tr>
 			</table>
+
 			<input type="submit" value="Submit OLAP query!"><br />
 			</form>
 
@@ -128,12 +137,21 @@
 				$store = $_POST['store_menu'];
 				$sales = $_POST['salesfact_menu'];
 
+				$time_input = htmlspecialchars($_POST['time_dice']);
+				$promotion_input = htmlspecialchars($_POST['promotion_dice']);
+				$product_input = htmlspecialchars($_POST['product_dice']);
+				$store_input = htmlspecialchars($_POST['store_dice']);
+
+				$table_name = array("time", "promotion", "product", "store");
 				$elements = array($time, $promotion, $product, $store, $sales);
+				$elements2 = array($time_input, $promotion_input, $product_input, $store_input);
+				$groupby = array("time.$time" , "promotion.$promotion" , "product.$product" , "store.$store");
 
 			if($time != 'none' OR $promotion != 'none' OR $product != 'none' OR $store != 'none' OR $sales != 'none'){
-				
+
 				$dicequery = "SELECT ";
 				$arrlength = count($elements);
+				$length = count($elements2);
 
 				for($i = 0; $i < $arrlength - 1; $i++){
 					if($elements[$i] != 'none'){
@@ -150,24 +168,68 @@
 
 				$dicequery .= " FROM time , promotion, product, store , salesfact 
 								WHERE time.time_key = salesfact.time_key AND promotion.promotion_key = salesfact.promotion_key 
-						   		 AND product.product_key = salesfact.product_key AND store.store_key = salesfact.store_key 
-						   		 GROUP BY ";
-
-				$groupby = array("time.$time" , "promotion.$promotion" , "product.$product" , "store.$store");
-
-				for($i = 0; $i < $arrlength - 1; $i++ ){
-					if($elements[$i] != 'none'){
-						$dicequery = $dicequery . ' ' . $groupby[$i] . ', ';
+						   		 AND product.product_key = salesfact.product_key AND store.store_key = salesfact.store_key";
+						   		 
+				if(!empty($time_input) OR !empty($promotion_input) OR !empty($product_input) OR !empty($store_input)){
+					
+					for($i = 0; $i < $length; $i++){
+						if(!empty($elements2[$i])){
+							$dicequery = $dicequery . " AND " . $table_name[$i] . "." . $elements[$i] . " = " . "\"" . $elements2[$i] . "\"";
+						}
 					}
 				}
-				$dicequery = substr($dicequery, 0, -2);
+
+				if(!empty($time_input) OR !empty($promotion_input) OR !empty($product_input) OR !empty($store_input)){
+					$count = 0;
+					$count1 = 0;
+
+					for($i = 0; $i < $length ; $i++){
+						if(!empty($elements2[$i])){
+							$count++;
+						}
+					}
+
+					for($i = 0; $i < $arrlength - 1 ; $i++){
+						if($elements[$i] != 'none'){
+							$count1++;
+						}
+					}
+
+					//echo $count . $count1;
+					
+					if($count != $count1 ){
+						$dicequery .= " GROUP BY ";
+
+						for($i = 0; $i < $arrlength - 1 ; $i++){
+							if(empty($elements2[$i]) AND $elements[$i] != 'none'){
+								$dicequery = $dicequery . ' ' . $groupby[$i] . ', ';
+							}
+						}
+						$dicequery = substr($dicequery, 0, -2);
+					}
+				}
+
+				else{
+					$dicequery .= " GROUP BY ";
+
+						for($i = 0; $i < $arrlength - 1; $i++ ){
+							if($elements[$i] != 'none'){
+								$dicequery = $dicequery . ' ' . $groupby[$i] . ', ';
+							}
+						}
+						$dicequery = substr($dicequery, 0, -2);
+				}
+
+				
+
+
 				$dicequery .= " limit 300";
 				
 				#Prints the query
-				//echo $dicequery;
+				echo "<p>" . $dicequery . "</p>";
 
 				$data1 = mysqli_query($con, $dicequery );
-				echo "<table border = 1> <tr>";
+				echo "<table align=\"center\" border = 1> <tr>";
 
 				$column_name = array("time", "promotion", "product", "store", "sales");
 				for($i = 0; $i < $arrlength; $i++ ){
@@ -194,10 +256,9 @@
 					echo "</tr>";
 					}
 					echo "</table>";
+				
 			}
-			else{
-				echo "nothing selected! ";
-			}
+			
 			?>
 		
 	</body>
